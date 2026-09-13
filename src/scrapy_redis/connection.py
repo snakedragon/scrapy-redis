@@ -1,33 +1,25 @@
-import redis
-import six
-
 from scrapy.utils.misc import load_object
 
-
-DEFAULT_REDIS_CLS = redis.StrictRedis
-
-
-# Sane connection defaults.
-DEFAULT_PARAMS = {
-    'socket_timeout': 30,
-    'socket_connect_timeout': 30,
-    'retry_on_timeout': True,
-}
+from . import defaults
 
 # Shortcut maps 'setting name' -> 'parmater name'.
 SETTINGS_PARAMS_MAP = {
-    'REDIS_URL': 'url',
-    'REDIS_HOST': 'host',
-    'REDIS_PORT': 'port',
+    "REDIS_URL": "url",
+    "REDIS_HOST": "host",
+    "REDIS_PORT": "port",
+    "REDIS_DB": "db",
+    "REDIS_ENCODING": "encoding",
 }
+
+SETTINGS_PARAMS_MAP["REDIS_DECODE_RESPONSES"] = "decode_responses"
 
 
 def get_redis_from_settings(settings):
     """Returns a redis client instance from given Scrapy settings object.
 
     This function uses ``get_client`` to instantiate the client and uses
-    ``DEFAULT_PARAMS`` global as defaults values for the parameters. You can
-    override them using the ``REDIS_PARAMS`` setting.
+    ``defaults.REDIS_PARAMS`` global as defaults values for the parameters. You
+    can override them using the ``REDIS_PARAMS`` setting.
 
     Parameters
     ----------
@@ -47,12 +39,21 @@ def get_redis_from_settings(settings):
         Server host.
     REDIS_PORT : str, optional
         Server port.
+    REDIS_DB : int, optional
+        Server database
+    REDIS_ENCODING : str, optional
+        Data encoding.
     REDIS_PARAMS : dict, optional
         Additional client parameters.
 
+    Python 3 Only
+    ----------------
+    REDIS_DECODE_RESPONSES : bool, optional
+        Sets the `decode_responses` kwarg in Redis cls ctor
+
     """
-    params = DEFAULT_PARAMS.copy()
-    params.update(settings.getdict('REDIS_PARAMS'))
+    params = defaults.REDIS_PARAMS.copy()
+    params.update(settings.getdict("REDIS_PARAMS"))
     # XXX: Deprecate REDIS_* settings.
     for source, dest in SETTINGS_PARAMS_MAP.items():
         val = settings.get(source)
@@ -60,8 +61,8 @@ def get_redis_from_settings(settings):
             params[dest] = val
 
     # Allow ``redis_cls`` to be a path to a class.
-    if isinstance(params.get('redis_cls'), six.string_types):
-        params['redis_cls'] = load_object(params['redis_cls'])
+    if isinstance(params.get("redis_cls"), str):
+        params["redis_cls"] = load_object(params["redis_cls"])
 
     return get_redis(**params)
 
@@ -88,8 +89,8 @@ def get_redis(**kwargs):
         Redis client instance.
 
     """
-    redis_cls = kwargs.pop('redis_cls', DEFAULT_REDIS_CLS)
-    url = kwargs.pop('url', None)
+    redis_cls = kwargs.pop("redis_cls", defaults.REDIS_CLS)
+    url = kwargs.pop("url", None)
     if url:
         return redis_cls.from_url(url, **kwargs)
     else:

@@ -2,18 +2,38 @@ from scrapy.utils.misc import load_object
 from scrapy.utils.serialize import ScrapyJSONEncoder
 from twisted.internet.threads import deferToThread
 
-from . import connection
-
+from . import connection, defaults
 
 default_serialize = ScrapyJSONEncoder().encode
 
 
-class RedisPipeline(object):
-    """Pushes serialized item into a redis list/queue"""
+class RedisPipeline:
+    """Pushes serialized item into a redis list/queue
 
-    def __init__(self, server,
-                 key='%(spider)s:items',
-                 serialize_func=default_serialize):
+    Settings
+    --------
+    REDIS_ITEMS_KEY : str
+        Redis key where to store items.
+    REDIS_ITEMS_SERIALIZER : str
+        Object path to serializer function.
+
+    """
+
+    def __init__(
+        self, server, key=defaults.PIPELINE_KEY, serialize_func=default_serialize
+    ):
+        """Initialize pipeline.
+
+        Parameters
+        ----------
+        server : StrictRedis
+            Redis client instance.
+        key : str
+            Redis key where to store items.
+        serialize_func : callable
+            Items serializer function.
+
+        """
         self.server = server
         self.key = key
         self.serialize = serialize_func
@@ -21,14 +41,12 @@ class RedisPipeline(object):
     @classmethod
     def from_settings(cls, settings):
         params = {
-            'server': connection.from_settings(settings),
+            "server": connection.from_settings(settings),
         }
-        if settings.get('REDIS_ITEMS_KEY'):
-            params['key'] = settings['REDIS_ITEMS_KEY']
-        if settings.get('REDIS_ITEMS_SERIALIZER'):
-            params['serialize_func'] = load_object(
-                settings['REDIS_ITEMS_SERIALIZER']
-            )
+        if settings.get("REDIS_ITEMS_KEY"):
+            params["key"] = settings["REDIS_ITEMS_KEY"]
+        if settings.get("REDIS_ITEMS_SERIALIZER"):
+            params["serialize_func"] = load_object(settings["REDIS_ITEMS_SERIALIZER"])
 
         return cls(**params)
 
@@ -52,4 +70,4 @@ class RedisPipeline(object):
         and/or spider.
 
         """
-        return self.key % {'spider': spider.name}
+        return self.key % {"spider": spider.name}

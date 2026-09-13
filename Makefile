@@ -5,10 +5,13 @@
 .PHONY: release dist install build-inplace
 define BROWSER_PYSCRIPT
 import os, webbrowser, sys
+FAIL = "\033[91m"
+ENDC = "\033[0m"
+
 try:
-	from urllib import pathname2url
-except:
 	from urllib.request import pathname2url
+except:
+	print(FAIL + "Python2 is deprecated, please upgrade your python >= 3.7" + ENDC)
 
 webbrowser.open("file://" + pathname2url(os.path.abspath(sys.argv[1])))
 endef
@@ -35,7 +38,8 @@ help:
 	@echo "compile-reqs - compile requirements"
 	@echo "install-reqs - install requirements"
 	@echo "docs - generate Sphinx HTML documentation, including API docs"
-	@echo "release - package and upload a release"
+	@echo "dist-upload - package and upload a release"
+	@echo "release - bump release and push changes"
 	@echo "dist - package"
 	@echo "develop - install package in develop mode"
 	@echo "install - install the package to the active Python's site-packages"
@@ -90,13 +94,13 @@ develop: clean
 	pip install -e .
 
 test: develop
-	py.test
+	pytest --ignore=setup.py
 
 test-all:
 	tox -v
 
 coverage: develop
-	coverage run -m py.test
+	coverage run -m pytest --ignore=setup.py
 	coverage combine
 	coverage report
 	coverage html
@@ -115,10 +119,14 @@ docs: docs-build
 servedocs: docs
 	watchmedo shell-command -p '*.rst' -c '$(MAKE) -C docs html' -R -D .
 
-release: clean check dist
-	# Tagging release.
-	VERSION=`cat VERSION`; git tag -a v$$VERSION
-	git push --follow-tags
+release:
+	@echo "To do a release, follow the steps:"
+	@echo "- bumpversion release"
+	@echo "- Review and commit"
+	@echo "- git tag -a \`cat VERSION\`"
+	@echo "- git push --follow-tags"
+
+dist-upload: clean check dist
 	twine upload dist/*
 
 dist: clean
